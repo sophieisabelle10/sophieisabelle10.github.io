@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PlayBook Planner</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #161920;
+    --surface2: #1e2230;
+    --surface3: #252a3a;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #f0f2f8;
+    --text2: #8b90a8;
+    --text3: #555b75;
+    --accent: #4f8ef7;
+    --accent-glow: rgba(79,142,247,0.18);
+    --green: #3ecf8e;
+    --green-bg: rgba(62,207,142,0.12);
+    --amber: #f5a623;
+    --amber-bg: rgba(245,166,35,0.12);
+    --red: #ff6b6b;
+    --red-bg: rgba(255,107,107,0.12);
+    --purple: #a78bfa;
+    --purple-bg: rgba(167,139,250,0.12);
+    --teal: #2dd4bf;
+    --teal-bg: rgba(45,212,191,0.12);
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  #root { position: relative; z-index: 1; }
+
+  .app { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* Header */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5rem; }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo-mark {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, #4f8ef7 0%, #a78bfa 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: #fff;
+    box-shadow: 0 0 20px rgba(79,142,247,0.35);
+  }
+  .app-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .app-subtitle { font-size: 13px; color: var(--text2); margin-top: 1px; }
+  .athlete-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 100px; padding: 6px 14px 6px 8px; font-size: 13px;
+  }
+  .athlete-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #4f8ef7, #a78bfa);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff;
+  }
+
+  /* Date bar */
+  .date-bar {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px 18px; margin-bottom: 1.5rem;
+    font-size: 13px; color: var(--text2);
+  }
+  .date-bar strong { color: var(--text); font-size: 15px; font-family: 'Syne', sans-serif; }
+
+  /* Main grid */
+  .main-grid { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; align-items: start; }
+
+  /* Timeline */
+  .timeline-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; overflow: hidden;
+  }
+  .timeline-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .timeline-header h2 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .timeline-body { padding: 16px; }
+
+  /* Time slots */
+  .time-row {
+    display: flex; align-items: stretch; gap: 0;
+    min-height: 44px; position: relative;
+  }
+  .time-row + .time-row { border-top: 1px solid var(--border); }
+  .time-label {
+    width: 52px; flex-shrink: 0; font-size: 11px; color: var(--text3);
+    padding: 10px 8px 0 0; text-align: right; font-family: 'DM Sans', sans-serif;
+    letter-spacing: 0.2px;
+  }
+  .time-slot-content { flex: 1; padding: 6px 8px; display: flex; align-items: center; }
+
+  /* Block styles */
+  .block {
+    border-radius: 8px; padding: 7px 11px; width: 100%;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 500; transition: all 0.15s;
+  }
+  .block-icon { flex-shrink: 0; opacity: 0.8; }
+  .block-label { flex: 1; }
+  .block-duration { font-size: 10px; opacity: 0.6; white-space: nowrap; }
+
+  .block-school { background: rgba(79,142,247,0.15); color: #7baaff; border: 1px solid rgba(79,142,247,0.25); }
+  .block-sports { background: rgba(245,166,35,0.15); color: #f5c36b; border: 1px solid rgba(245,166,35,0.25); }
+  .block-homework { background: rgba(167,139,250,0.15); color: #c4b0fc; border: 1px solid rgba(167,139,250,0.25); }
+  .block-hobby { background: rgba(62,207,142,0.15); color: #5edf9e; border: 1px solid rgba(62,207,142,0.25); }
+  .block-meal { background: rgba(255,107,107,0.15); color: #ff9a9a; border: 1px solid rgba(255,107,107,0.25); }
+
+  /* Available window */
+  .available-window {
+    border-radius: 8px; padding: 7px 11px; width: 100%;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; cursor: pointer;
+    border: 1.5px dashed rgba(62,207,142,0.4);
+    background: rgba(62,207,142,0.05);
+    color: var(--green);
+    transition: all 0.18s;
+    position: relative;
+    overflow: hidden;
+  }
+  .available-window:hover {
+    background: rgba(62,207,142,0.12);
+    border-color: rgba(62,207,142,0.7);
+    transform: translateX(2px);
+  }
+  .available-window .pulse {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green); flex-shrink: 0;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+  .available-window .win-label { flex: 1; font-weight: 500; }
+  .available-window .win-duration { font-size: 10px; opacity: 0.7; }
+  .available-window .win-cta {
+    font-size: 10px; background: rgba(62,207,142,0.2);
+    border-radius: 4px; padding: 2px 7px; font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Empty slot */
+  .empty-slot { height: 44px; }
+
+  /* Right panel */
+  .right-panel { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* Stats card */
+  .stats-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 16px;
+  }
+  .stats-card h3 { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text2); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .stat-row:last-child { margin-bottom: 0; }
+  .stat-label { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text2); }
+  .stat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .stat-val { font-size: 13px; font-weight: 600; color: var(--text); }
+  .progress-bar-bg { height: 4px; background: var(--surface3); border-radius: 2px; margin-top: 10px; }
+  .progress-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--green), var(--accent)); transition: width 0.4s; }
+
+  /* Hobbies panel */
+  .hobbies-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 16px;
+  }
+  .hobbies-card h3 { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text2); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .hobby-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface2);
+    margin-bottom: 8px; cursor: default; transition: all 0.15s;
+  }
+  .hobby-item:last-child { margin-bottom: 0; }
+  .hobby-item.assigned { opacity: 0.5; }
+  .hobby-icon-wrap { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .hobby-name { flex: 1; font-size: 13px; font-weight: 500; }
+  .hobby-tag { font-size: 10px; border-radius: 4px; padding: 2px 7px; font-weight: 600; }
+  .hobby-tag.free { background: var(--green-bg); color: var(--green); }
+  .hobby-tag.done { background: var(--surface3); color: var(--text3); }
+
+  /* Windows summary */
+  .windows-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 16px;
+  }
+  .windows-card h3 { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text2); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .win-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border-radius: 8px; margin-bottom: 6px;
+    background: var(--green-bg); border: 1px solid rgba(62,207,142,0.2);
+    font-size: 12px; color: var(--green); cursor: pointer; transition: all 0.15s;
+  }
+  .win-item:hover { background: rgba(62,207,142,0.18); }
+  .win-item:last-child { margin-bottom: 0; }
+  .win-item-time { font-weight: 600; }
+  .win-item-dur { opacity: 0.6; font-size: 11px; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 1rem;
+    animation: fadeIn 0.15s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 20px; padding: 24px; width: 100%; max-width: 380px;
+    animation: slideUp 0.2s ease;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  }
+  @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+  .modal-hobby-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+  .modal-hobby-btn {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--border2); background: var(--surface2);
+    cursor: pointer; transition: all 0.15s; text-align: left; width: 100%;
+  }
+  .modal-hobby-btn:hover { border-color: var(--green); background: var(--green-bg); }
+  .modal-hobby-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+  .modal-hobby-btn:hover.disabled { border-color: var(--border2); background: var(--surface2); }
+  .modal-hobby-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .modal-hobby-status { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .modal-actions { display: flex; gap: 8px; }
+  .btn-cancel {
+    flex: 1; padding: 11px; border-radius: 10px;
+    border: 1px solid var(--border2); background: transparent;
+    color: var(--text2); font-size: 14px; font-weight: 500; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+  }
+  .btn-cancel:hover { background: var(--surface2); }
+
+  /* Confetti flash */
+  .confetti-banner {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--green), var(--accent));
+    color: #fff; border-radius: 100px; padding: 10px 22px;
+    font-size: 14px; font-weight: 700; z-index: 200;
+    font-family: 'Syne', sans-serif;
+    animation: bannerIn 0.3s ease, bannerOut 0.3s ease 2.2s forwards;
+    box-shadow: 0 8px 32px rgba(62,207,142,0.4);
+    white-space: nowrap;
+  }
+  @keyframes bannerIn { from { opacity: 0; transform: translateX(-50%) translateY(-12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+  @keyframes bannerOut { to { opacity: 0; transform: translateX(-50%) translateY(-12px); } }
+
+  /* Section divider label */
+  .time-section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text3); padding: 8px 8px 4px 60px;
+  }
+
+  /* Responsive */
+  @media (max-width: 720px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .right-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .windows-card { grid-column: 1 / -1; }
+    .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  }
+  @media (max-width: 480px) {
+    .right-panel { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo, useEffect } = React;
+
+// ── helpers ──────────────────────────────────────────────────
+const HOUR_START = 6;   // 6 AM
+const HOUR_END   = 23;  // 11 PM
+
+function toMin(h, m = 0) { return h * 60 + m; }
+function minToLabel(m) {
+  const h = Math.floor(m / 60), min = m % 60;
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  return `${h12}:${String(min).padStart(2,'0')} ${suffix}`;
+}
+function durationLabel(mins) {
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins/60), m = mins%60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+// ── category config ───────────────────────────────────────────
+const CATEGORIES = {
+  school:   { label: 'School',          color: '#7baaff', bg: 'rgba(79,142,247,0.15)',  border: 'rgba(79,142,247,0.25)',  icon: 'GraduationCap' },
+  sports:   { label: 'Sports/Practice', color: '#f5c36b', bg: 'rgba(245,166,35,0.15)',  border: 'rgba(245,166,35,0.25)',  icon: 'Dumbbell' },
+  homework: { label: 'Homework',        color: '#c4b0fc', bg: 'rgba(167,139,250,0.15)', border: 'rgba(167,139,250,0.25)', icon: 'BookOpen' },
+  meal:     { label: 'Meal Break',      color: '#ff9a9a', bg: 'rgba(255,107,107,0.15)', border: 'rgba(255,107,107,0.25)', icon: 'Utensils' },
+  hobby:    { label: 'Hobby Time',      color: '#5edf9e', bg: 'rgba(62,207,142,0.15)',  border: 'rgba(62,207,142,0.25)',  icon: 'Smile' },
+};
+
+const HOBBIES = [
+  { id: 'videogames', label: 'Video Games',  icon: 'Gamepad2',  color: '#a78bfa', bg: 'rgba(167,139,250,0.2)' },
+  { id: 'legos',      label: 'Legos',        icon: 'Blocks',    color: '#f5a623', bg: 'rgba(245,166,35,0.2)'  },
+  { id: 'photography',label: 'Photography',  icon: 'Camera',    color: '#2dd4bf', bg: 'rgba(45,212,191,0.2)'  },
+];
+
+// ── default schedule for Yoseph (baseball player) ────────────
+const DEFAULT_BLOCKS = [
+  { id: 1,  type: 'meal',     label: 'Breakfast',           start: toMin(6,0),  end: toMin(6,30)  },
+  { id: 2,  type: 'school',   label: 'Period 1 & 2',        start: toMin(7,30), end: toMin(9,15)  },
+  { id: 3,  type: 'school',   label: 'Period 3 & 4',        start: toMin(9,30), end: toMin(11,15) },
+  { id: 4,  type: 'meal',     label: 'Lunch',               start: toMin(11,15),end: toMin(12,0)  },
+  { id: 5,  type: 'school',   label: 'Period 5 & 6',        start: toMin(12,0), end: toMin(13,45) },
+  { id: 6,  type: 'school',   label: 'Period 7 (AP CS A)',  start: toMin(13,45),end: toMin(14,30) },
+  { id: 7,  type: 'sports',   label: 'Baseball Practice',   start: toMin(15,30),end: toMin(18,0)  },
+  { id: 8,  type: 'meal',     label: 'Dinner',              start: toMin(18,30),end: toMin(19,0)  },
+  { id: 9,  type: 'homework', label: 'Homework Block',      start: toMin(19,30),end: toMin(21,30) },
+];
+
+// ── compute free windows ──────────────────────────────────────
+function computeWindows(blocks, hobbyAssignments) {
+  const dayStart = toMin(HOUR_START), dayEnd = toMin(HOUR_END);
+  const occupied = [...blocks, ...hobbyAssignments]
+    .map(b => ({ start: b.start, end: b.end }))
+    .sort((a,b) => a.start - b.start);
+
+  const windows = [];
+  let cursor = dayStart;
+  for (const seg of occupied) {
+    if (seg.start > cursor && seg.start - cursor >= 15) {
+      windows.push({ start: cursor, end: seg.start });
+    }
+    if (seg.end > cursor) cursor = seg.end;
+  }
+  if (dayEnd > cursor && dayEnd - cursor >= 15) {
+    windows.push({ start: cursor, end: dayEnd });
+  }
+  return windows;
+}
+
+// ── timeline slot generation ──────────────────────────────────
+function buildSlots(blocks, hobbyAssignments, freeWindows) {
+  const allBlocks = [...blocks, ...hobbyAssignments];
+  const totalMins = toMin(HOUR_END) - toMin(HOUR_START);
+  const slots = [];
+
+  // build per-minute occupancy
+  const occ = {}; // minute -> block or window
+  for (const b of allBlocks) {
+    for (let m = b.start; m < b.end; m++) occ[m] = { kind: 'block', data: b };
+  }
+  for (const w of freeWindows) {
+    for (let m = w.start; m < w.end; m++) {
+      if (!occ[m]) occ[m] = { kind: 'window', data: w };
+    }
+  }
+
+  // collapse into contiguous segments for rendering
+  let cur = toMin(HOUR_START);
+  const end = toMin(HOUR_END);
+  while (cur < end) {
+    const cell = occ[cur];
+    if (!cell) { cur++; continue; }
+    let run = cur + 1;
+    while (run < end && occ[run] && occ[run].data === cell.data) run++;
+    slots.push({ start: cur, end: run, kind: cell.kind, data: cell.data });
+    cur = run;
+  }
+  return slots;
+}
+
+// ── Icon component ─────────────────────────────────────────────
+function Icon({ name, size = 14, color }) {
+  const ref = React.useRef(null);
+  useEffect(() => {
+    if (ref.current && window.lucide) {
+      ref.current.innerHTML = '';
+      try {
+        const icons = window.lucide;
+        if (icons[name]) {
+          const svg = icons[name];
+          if (typeof svg === 'object' && svg.toSvg) {
+            ref.current.innerHTML = svg.toSvg({ width: size, height: size, color: color || 'currentColor', 'stroke-width': 2 });
+          }
+        }
+      } catch(e) {}
+    }
+  }, [name, size, color]);
+  return <span ref={ref} style={{ display:'inline-flex', alignItems:'center', flexShrink: 0 }} />;
+}
+
+// ── Block component ────────────────────────────────────────────
+function BlockEl({ block }) {
+  const cat = CATEGORIES[block.type] || CATEGORIES.hobby;
+  const dur = block.end - block.start;
+  const hobby = block.hobby ? HOBBIES.find(h => h.id === block.hobby) : null;
+
+  const style = hobby
+    ? { background: hobby.bg, color: hobby.color, border: `1px solid ${hobby.color}44` }
+    : { background: cat.bg, color: cat.color, border: `1px solid ${cat.border}` };
+
+  const iconName = hobby ? hobby.icon : cat.icon;
+  const label = hobby ? `${hobby.label}` : block.label;
+
+  return (
+    <div className="block" style={style}>
+      <span className="block-icon"><Icon name={iconName} size={13} color={hobby ? hobby.color : cat.color} /></span>
+      <span className="block-label">{label}</span>
+      <span className="block-duration">{durationLabel(dur)}</span>
+    </div>
+  );
+}
+
+// ── Available Window component ─────────────────────────────────
+function WindowEl({ window: w, onClick }) {
+  const dur = w.end - w.start;
+  return (
+    <div className="available-window" onClick={() => onClick(w)} title="Click to assign a hobby">
+      <span className="pulse" />
+      <span className="win-label">Free Window</span>
+      <span className="win-duration">{minToLabel(w.start)} – {minToLabel(w.end)}</span>
+      <span className="win-cta">+ Assign</span>
+    </div>
+  );
+}
+
+// ── Main App ───────────────────────────────────────────────────
+function App() {
+  const [hobbyAssignments, setHobbyAssignments] = useState([]);
+  const [modal, setModal] = useState(null); // { window }
+  const [banner, setBanner] = useState(null);
+
+  const freeWindows = useMemo(
+    () => computeWindows(DEFAULT_BLOCKS, hobbyAssignments),
+    [hobbyAssignments]
+  );
+
+  const slots = useMemo(
+    () => buildSlots(DEFAULT_BLOCKS, hobbyAssignments, freeWindows),
+    [hobbyAssignments, freeWindows]
+  );
+
+  const assignedHobbies = hobbyAssignments.map(a => a.hobby);
+
+  function openModal(win) { setModal({ window: win }); }
+  function closeModal() { setModal(null); }
+
+  function assignHobby(hobby) {
+    if (!modal) return;
+    const w = modal.window;
+    setHobbyAssignments(prev => [
+      ...prev,
+      { id: Date.now(), type: 'hobby', label: hobby.label, hobby: hobby.id, start: w.start, end: w.end }
+    ]);
+    setBanner(`🎮 ${hobby.label} added to ${minToLabel(w.start)}!`);
+    setTimeout(() => setBanner(null), 2500);
+    closeModal();
+  }
+
+  function removeAssignment(id) {
+    setHobbyAssignments(prev => prev.filter(a => a.id !== id));
+  }
+
+  // Stats
+  const totalMins = toMin(HOUR_END) - toMin(HOUR_START);
+  const schoolMins = DEFAULT_BLOCKS.filter(b=>b.type==='school').reduce((a,b)=>a+(b.end-b.start),0);
+  const sportsMins = DEFAULT_BLOCKS.filter(b=>b.type==='sports').reduce((a,b)=>a+(b.end-b.start),0);
+  const hwMins     = DEFAULT_BLOCKS.filter(b=>b.type==='homework').reduce((a,b)=>a+(b.end-b.start),0);
+  const hobbyMins  = hobbyAssignments.reduce((a,b)=>a+(b.end-b.start),0);
+  const freeMins   = freeWindows.reduce((a,w)=>a+(w.end-w.start),0);
+  const freePct    = Math.round((freeMins / totalMins) * 100);
+
+  // Group slots by hour section
+  const SECTIONS = [
+    { label: 'Morning',   from: toMin(6),  to: toMin(12) },
+    { label: 'Afternoon', from: toMin(12), to: toMin(17) },
+    { label: 'Evening',   from: toMin(17), to: toMin(23) },
+  ];
+
+  return (
+    <div className="app">
+      {banner && <div className="confetti-banner">{banner}</div>}
+
+      {/* Header */}
+      <header className="header">
+        <div className="header-left">
+          <div className="logo-mark">PB</div>
+          <div>
+            <div className="app-title">PlayBook Planner</div>
+            <div className="app-subtitle">Balance your game, on and off the field</div>
+          </div>
+        </div>
+        <div className="athlete-chip">
+          <div className="athlete-avatar">YO</div>
+          <div>
+            <div style={{fontSize:13,fontWeight:600}}>Yoseph</div>
+            <div style={{fontSize:11,color:'var(--text2)',marginTop:1}}>⚾ Baseball · Junior</div>
+          </div>
+        </div>
+      </header>
+
+      {/* Date bar */}
+      <div className="date-bar">
+        <Icon name="CalendarDays" size={15} color="var(--text2)" />
+        <strong>Today — Monday</strong>
+        <span style={{marginLeft:4}}>Daily schedule overview · {durationLabel(totalMins)} tracked</span>
+        <span style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:6}}>
+          <span style={{width:8,height:8,borderRadius:'50%',background:'var(--green)',display:'inline-block',boxShadow:'0 0 8px var(--green)'}}/>
+          <span style={{color:'var(--green)',fontWeight:600}}>{freeWindows.length} open window{freeWindows.length!==1?'s':''}</span>
+        </span>
+      </div>
+
+      <div className="main-grid">
+        {/* Timeline */}
+        <div className="timeline-card">
+          <div className="timeline-header">
+            <h2>Daily Timeline</h2>
+            <div className="legend">
+              {Object.entries(CATEGORIES).filter(([k])=>k!=='hobby').map(([k,v])=>(
+                <div className="legend-item" key={k}>
+                  <span className="legend-dot" style={{background:v.color}} />
+                  {v.label}
+                </div>
+              ))}
+              <div className="legend-item">
+                <span className="legend-dot" style={{background:'var(--green)'}} />
+                Available
+              </div>
+            </div>
+          </div>
+
+          <div className="timeline-body">
+            {SECTIONS.map(sec => {
+              const sectionSlots = slots.filter(s => s.end > sec.from && s.start < sec.to);
+              if (!sectionSlots.length) return null;
+              return (
+                <div key={sec.label}>
+                  <div className="time-section-label">{sec.label}</div>
+                  {sectionSlots.map((slot, i) => (
+                    <div className="time-row" key={`${slot.start}-${slot.end}-${i}`}>
+                      <div className="time-label">{minToLabel(slot.start)}</div>
+                      <div className="time-slot-content">
+                        {slot.kind === 'block'
+                          ? <BlockEl block={slot.data} />
+                          : <WindowEl window={slot.data} onClick={openModal} />
+                        }
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right panel */}
+        <div className="right-panel">
+
+          {/* Stats */}
+          <div className="stats-card">
+            <h3>Time Breakdown</h3>
+            <div className="stat-row">
+              <div className="stat-label"><span className="stat-dot" style={{background:'#7baaff'}}/> School</div>
+              <div className="stat-val">{durationLabel(schoolMins)}</div>
+            </div>
+            <div className="stat-row">
+              <div className="stat-label"><span className="stat-dot" style={{background:'#f5c36b'}}/> Practice</div>
+              <div className="stat-val">{durationLabel(sportsMins)}</div>
+            </div>
+            <div className="stat-row">
+              <div className="stat-label"><span className="stat-dot" style={{background:'#c4b0fc'}}/> Homework</div>
+              <div className="stat-val">{durationLabel(hwMins)}</div>
+            </div>
+            <div className="stat-row">
+              <div className="stat-label"><span className="stat-dot" style={{background:'var(--green)'}}/> Hobbies</div>
+              <div className="stat-val">{durationLabel(hobbyMins)}</div>
+            </div>
+            <div className="stat-row" style={{marginTop:8}}>
+              <div className="stat-label" style={{color:'var(--text)'}}><Icon name="Clock" size={13} /> Free time</div>
+              <div className="stat-val" style={{color:'var(--green)'}}>{durationLabel(freeMins)} ({freePct}%)</div>
+            </div>
+            <div className="progress-bar-bg">
+              <div className="progress-bar-fill" style={{width:`${100-freePct}%`}} />
+            </div>
+            <div style={{fontSize:10,color:'var(--text3)',marginTop:5}}>Scheduled capacity used</div>
+          </div>
+
+          {/* Hobbies */}
+          <div className="hobbies-card">
+            <h3>My Hobbies</h3>
+            {HOBBIES.map(h => {
+              const used = assignedHobbies.includes(h.id);
+              return (
+                <div className={`hobby-item ${used ? 'assigned' : ''}`} key={h.id}>
+                  <div className="hobby-icon-wrap" style={{background: h.bg}}>
+                    <Icon name={h.icon} size={16} color={h.color} />
+                  </div>
+                  <span className="hobby-name">{h.label}</span>
+                  <span className={`hobby-tag ${used ? 'done' : 'free'}`}>{used ? 'Assigned' : 'Available'}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Free windows summary */}
+          <div className="windows-card">
+            <h3 style={{display:'flex',alignItems:'center',gap:6}}>
+              <Icon name="Zap" size={12} color="var(--green)" />
+              Open Windows
+            </h3>
+            {freeWindows.length === 0 && (
+              <div style={{fontSize:12,color:'var(--text3)',padding:'8px 0'}}>
+                No free windows — your day is fully scheduled!
+              </div>
+            )}
+            {freeWindows.map((w,i) => (
+              <div className="win-item" key={i} onClick={() => openModal(w)}>
+                <Icon name="Clock3" size={13} color="var(--green)" />
+                <span className="win-item-time">{minToLabel(w.start)} – {minToLabel(w.end)}</span>
+                <span className="win-item-dur">{durationLabel(w.end - w.start)}</span>
+              </div>
+            ))}
+            {hobbyAssignments.length > 0 && (
+              <div style={{marginTop:12,borderTop:'1px solid var(--border)',paddingTop:12}}>
+                <div style={{fontSize:11,color:'var(--text3)',marginBottom:8,textTransform:'uppercase',letterSpacing:'0.5px',fontWeight:700}}>Assigned Hobbies</div>
+                {hobbyAssignments.map(a => {
+                  const h = HOBBIES.find(h=>h.id===a.hobby);
+                  return (
+                    <div key={a.id} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,fontSize:12}}>
+                      <span style={{color: h?.color, flex:1}}>{h?.label} · {minToLabel(a.start)}</span>
+                      <button
+                        onClick={() => removeAssignment(a.id)}
+                        style={{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',padding:'2px',display:'flex',alignItems:'center'}}
+                        title="Remove"
+                      >
+                        <Icon name="X" size={12} color="var(--text3)" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+
+      {/* Assign Modal */}
+      {modal && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Assign Hobby</div>
+            <div className="modal-sub">
+              Free window: <strong style={{color:'var(--green)'}}>{minToLabel(modal.window.start)} – {minToLabel(modal.window.end)}</strong>
+              &nbsp;({durationLabel(modal.window.end - modal.window.start)})
+            </div>
+            <div className="modal-hobby-list">
+              {HOBBIES.map(h => {
+                const already = assignedHobbies.includes(h.id);
+                return (
+                  <button
+                    key={h.id}
+                    className={`modal-hobby-btn ${already ? 'disabled' : ''}`}
+                    onClick={() => !already && assignHobby(h)}
+                    style={already ? {} : {}}
+                  >
+                    <div style={{width:38,height:38,borderRadius:10,background:h.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                      <Icon name={h.icon} size={18} color={h.color} />
+                    </div>
+                    <div>
+                      <div className="modal-hobby-name">{h.label}</div>
+                      <div className="modal-hobby-status">{already ? 'Already assigned to another window' : 'Click to assign to this window'}</div>
+                    </div>
+                    {!already && <Icon name="ChevronRight" size={16} color="var(--text3)" />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={closeModal}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
